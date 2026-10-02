@@ -2,11 +2,9 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
 import type { Account, Meter } from '../types'
-import { circled, parseCswap, switchHint } from './parse'
+import { circled, otherText, parseCswap, switchTo } from './parse'
 
 const meter = atom({ plugin: 'twin-meter', key: 'meter' } as const, null)
-
-const color = (pct: number) => (pct >= 60 ? 'red' : pct >= 40 ? 'yellow' : 'green')
 
 let lastRun = 0
 
@@ -46,6 +44,7 @@ export const register: Register = on => {
     return next(e)
   })
 
+  // One row shared with on-me: whatever the band holds on the left, the other accounts on the right.
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     const below = await next(e)
     const m = await read($, meter)
@@ -54,28 +53,21 @@ export const register: Register = on => {
     const { Box, Text } = $.ui.resolve(e)
     const active = m.accounts.find((a: Account) => a.isActive)
     const used = active && m.startFive !== null ? active.five - m.startFive : 0
-    const hint = switchHint(m.accounts)
+    const to = switchTo(m.accounts)
+    const others = otherText(m.accounts)
+    if (!others && !to) return below
 
-    const mine = (
-      <Box key="twin-meter" flexDirection="row" gap={1} flexWrap="wrap">
-        {m.accounts.map((a: Account) => (
-          <Text key={`acct-${a.n}`} bold={a.isActive} dimColor={!a.isActive}>
-            {a.isActive ? '★' : ' '}
-            {circled(a.n)} <Text color={color(a.five)}>5h {a.five}%</Text>
-            {a.fiveReset ? ` ↻${a.fiveReset}` : ''} · 7d {a.week}%
-          </Text>
-        ))}
-        {used > 0 && <Text dimColor>· this session +{used}%</Text>}
-        {hint && <Text color="cyan">{hint}</Text>}
-      </Box>
-    )
-    return below ? (
-      <Box flexDirection="column">
-        {mine}
-        {below}
-      </Box>
+    const mine = to ? (
+      <Text key="twin-meter" color="cyan">{`⇄ switch to ${circled(to.n)} · ${to.five}% used  (cswap switch ${to.n})`}</Text>
     ) : (
-      mine
+      <Text key="twin-meter" dimColor>{`⇄ ${others}${used >= 10 ? `  · here +${used}%` : ''}`}</Text>
+    )
+    if (!below) return mine
+    return (
+      <Box flexDirection="row" justifyContent="space-between" gap={2} width={e.props.bodyColumns}>
+        <Box flexShrink={1}>{below}</Box>
+        <Box flexShrink={0}>{mine}</Box>
+      </Box>
     )
   })
 }

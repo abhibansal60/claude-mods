@@ -1,1 +1,12 @@
-{ "name": "on-me", "version": "0.1.0", "description": "Band: what waits on you and what Claude is doing now", "types": "./types/index.d.ts" }
+{
+  "name": "on-me",
+  "version": "0.2.0",
+  "description": "Band: what waits on you and what Claude is doing now",
+  "types": "./types/index.d.ts",
+  "author": {
+    "name": "Abhinav Bansal",
+    "url": "https://github.com/abhibansal60"
+  },
+  "homepage": "https://github.com/abhibansal60/claude-mods",
+  "license": "MIT"
+}

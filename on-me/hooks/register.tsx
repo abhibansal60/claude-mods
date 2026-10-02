@@ -6,6 +6,9 @@ import { endsWithQuestion, parseBlocked } from './parse'
 
 const state = atom({ plugin: 'on-me', key: 'state' } as const, { items: [], doing: '' })
 
+// Markdown marks read as noise in a one-line band.
+const plain = (text: string) => text.replace(/[`*_]/g, '').replace(/\s+/g, ' ').trim()
+
 const short = (text: string, n: number) => (text.length > n ? `${text.slice(0, n - 1)}…` : text)
 
 export const register: Register = on => {
@@ -30,35 +33,28 @@ export const register: Register = on => {
     return next(e)
   })
 
+  // One row shared with twin-meter: on-me on the left, whatever the band holds below it on the right.
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     const below = await next(e)
     if (e.props.hasSurvey) return below
     const s = await read($, state)
     const { Box, Text } = $.ui.resolve(e)
-    const width = Math.max(20, e.props.bodyColumns - 14)
 
-    const mine = (
-      <Box key="on-me" flexDirection="column">
-        {e.props.isWorking && s.doing && <Text color="cyan">▶ me: {short(s.doing, width)}</Text>}
-        {s.items.length === 0 ? (
-          <Text color="green">✓ all clear, nothing waits on you</Text>
-        ) : (
-          s.items.slice(0, 3).map((item: string, i: number) => (
-            <Text key={`item-${i}`} color="yellow" wrap="truncate">
-              {i === 0 ? `⏳ on you: ${s.items.length} · ` : '            · '}
-              {item}
-            </Text>
-          ))
-        )}
+    const first = plain(s.items[0] ?? '')
+    const more = s.items.length > 1 ? `  +${s.items.length - 1}` : ''
+    const mine =
+      e.props.isWorking && s.doing ? (
+        <Text key="on-me" color="cyan" dimColor wrap="truncate-end">{`▶ ${plain(s.doing)}`}</Text>
+      ) : first ? (
+        <Text key="on-me" color="yellow" wrap="truncate-end">{`⏳ ${first}${more}`}</Text>
+      ) : null
+
+    if (!mine || !below) return mine ?? below
+    return (
+      <Box flexDirection="row" justifyContent="space-between" gap={2} width={e.props.bodyColumns}>
+        <Box flexShrink={1}>{mine}</Box>
+        <Box flexShrink={0}>{below}</Box>
       </Box>
-    )
-    return below ? (
-      <Box flexDirection="column">
-        {mine}
-        {below}
-      </Box>
-    ) : (
-      mine
     )
   })
 }

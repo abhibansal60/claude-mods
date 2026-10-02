@@ -3,6 +3,7 @@ export type Account = {
   email: string
   isActive: boolean
   five: number
+  // time until the 5h window resets, like "3h"
   fiveReset: string | null
   week: number
 }

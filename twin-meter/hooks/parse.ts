@@ -8,7 +8,7 @@ export function parseCswap(text: string): Account[] {
   const accounts: Account[] = []
   for (const block of text.split(/\n(?=\s*\d+: )/)) {
     const head = block.match(/^\s*(\d+): (\S+)/m)
-    const five = block.match(/5h:\s*(\d+)%(?:\s+resets\s+(.+?)\s{2,}in)?/)
+    const five = block.match(/5h:\s*(\d+)%(?:.*?\bin\s+(\d+[dhm])(?:\s+\d+[hm])?)?/)
     const week = block.match(/7d:\s*(\d+)%/)
     if (!head || !five || !week) continue
     const email = head[2]!
@@ -27,13 +27,18 @@ export function parseCswap(text: string): Account[] {
 const CIRCLED = ['⓪', '①', '②', '③', '④', '⑤']
 export const circled = (n: number) => CIRCLED[n] ?? `(${n})`
 
-// A hint only when the active account is getting full and another has room.
-export function switchHint(accounts: Account[]): string | null {
+// The account to switch to, when the active one is getting full and another has room.
+export function switchTo(accounts: Account[]): Account | null {
   const active = accounts.find(a => a.isActive)
   if (!active || active.five < 60) return null
-  const best = accounts
-    .filter(a => !a.isActive && a.week < 95)
-    .sort((a, b) => a.five - b.five)[0]
-  if (!best || best.five > active.five - 20) return null
-  return `→ cswap switch ${best.n} (5h ${best.five}%)`
+  const best = accounts.filter(a => !a.isActive && a.week < 95).sort((a, b) => a.five - b.five)[0]
+  return best && best.five <= active.five - 20 ? best : null
+}
+
+// The status line already shows the active account, so the band shows only the others.
+export function otherText(accounts: Account[]): string {
+  return accounts
+    .filter(a => !a.isActive)
+    .map(a => `${circled(a.n)} ${a.five}%${a.fiveReset ? ` ↻${a.fiveReset}` : ''} · 7d ${a.week}%`)
+    .join('  ')
 }

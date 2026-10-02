@@ -1,1 +1,12 @@
-{ "name": "twin-meter", "version": "0.1.0", "description": "5h and 7d limits of both cswap accounts in the band above the prompt", "types": "./types/index.d.ts" }
+{
+  "name": "twin-meter",
+  "version": "0.2.0",
+  "description": "5h and 7d limits of both cswap accounts in the band above the prompt",
+  "types": "./types/index.d.ts",
+  "author": {
+    "name": "Abhinav Bansal",
+    "url": "https://github.com/abhibansal60"
+  },
+  "homepage": "https://github.com/abhibansal60/claude-mods",
+  "license": "MIT"
+}

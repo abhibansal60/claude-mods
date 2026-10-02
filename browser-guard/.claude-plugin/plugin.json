@@ -1,1 +1,11 @@
-{ "name": "browser-guard", "version": "0.1.0", "description": "Stops Chrome actions when the Chrome profile is not the one paired with the active cswap account" }
+{
+  "name": "browser-guard",
+  "version": "0.2.0",
+  "description": "Stops Chrome actions when the Chrome profile is not the one paired with the active cswap account",
+  "author": {
+    "name": "Abhinav Bansal",
+    "url": "https://github.com/abhibansal60"
+  },
+  "homepage": "https://github.com/abhibansal60/claude-mods",
+  "license": "MIT"
+}

@@ -1,1 +1,12 @@
-{ "name": "herdr-fleet", "version": "0.1.0", "description": "Pane: every herdr agent, its status and last words, with this pane marked", "types": "./types/index.d.ts" }
+{
+  "name": "herdr-fleet",
+  "version": "0.2.0",
+  "description": "Pane: every herdr agent, its status and last words, with this pane marked",
+  "types": "./types/index.d.ts",
+  "author": {
+    "name": "Abhinav Bansal",
+    "url": "https://github.com/abhibansal60"
+  },
+  "homepage": "https://github.com/abhibansal60/claude-mods",
+  "license": "MIT"
+}

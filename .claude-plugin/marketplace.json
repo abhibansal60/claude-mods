@@ -1,11 +1,38 @@
 {
   "name": "claude-mods",
-  "owner": { "name": "Abhinav Bansal", "url": "https://github.com/abhibansal60" },
+  "owner": {
+    "name": "Abhinav Bansal",
+    "url": "https://github.com/abhibansal60"
+  },
   "plugins": [
-    { "name": "twin-meter", "source": "./twin-meter", "description": "5h and 7d limits of both cswap accounts in the band above the prompt" },
-    { "name": "on-me", "source": "./on-me", "description": "Band: what waits on you and what Claude is doing now" },
-    { "name": "ship-state", "source": "./ship-state", "description": "Pane: uncommitted, unpushed, CI and deploy state of each repo the session touched" },
-    { "name": "browser-guard", "source": "./browser-guard", "description": "Stops Chrome actions when the Chrome profile is not the one paired with the active cswap account" },
-    { "name": "herdr-fleet", "source": "./herdr-fleet", "description": "Pane: every herdr agent, its status and last words, with this pane marked" }
-  ]
+    {
+      "name": "twin-meter",
+      "source": "./twin-meter",
+      "description": "5h and 7d limits of both cswap accounts in the band above the prompt"
+    },
+    {
+      "name": "on-me",
+      "source": "./on-me",
+      "description": "Band: what waits on you and what Claude is doing now"
+    },
+    {
+      "name": "ship-state",
+      "source": "./ship-state",
+      "description": "Pane: uncommitted, unpushed, CI and deploy state of each repo the session touched"
+    },
+    {
+      "name": "browser-guard",
+      "source": "./browser-guard",
+      "description": "Stops Chrome actions when the Chrome profile is not the one paired with the active cswap account"
+    },
+    {
+      "name": "herdr-fleet",
+      "source": "./herdr-fleet",
+      "description": "Pane: every herdr agent, its status and last words, with this pane marked"
+    }
+  ],
+  "metadata": {
+    "description": "Claude Code mods for parallel sessions: account limits, what waits on you, ship state, Chrome profile guard, herdr fleet",
+    "version": "0.2.0"
+  }
 }

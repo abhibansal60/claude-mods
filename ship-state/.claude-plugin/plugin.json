@@ -1,1 +1,12 @@
-{ "name": "ship-state", "version": "0.1.0", "description": "Pane: uncommitted, unpushed, CI and deploy state of each repo this session touched", "types": "./types/index.d.ts" }
+{
+  "name": "ship-state",
+  "version": "0.2.0",
+  "description": "Pane: uncommitted, unpushed, CI and deploy state of each repo this session touched",
+  "types": "./types/index.d.ts",
+  "author": {
+    "name": "Abhinav Bansal",
+    "url": "https://github.com/abhibansal60"
+  },
+  "homepage": "https://github.com/abhibansal60/claude-mods",
+  "license": "MIT"
+}
