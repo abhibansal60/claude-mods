@@ -21,7 +21,7 @@ test('parses both accounts, shows the other one and suggests a switch', async ()
     { n: 1, email: 'one@example.com', isActive: true, five: 87, fiveReset: '3h', week: 10 },
     { n: 2, email: 'two@example.com', isActive: false, five: 3, fiveReset: '45m', week: 91 },
   ])
-  expect(otherText(accounts)).toBe('account 2: 5h 3% (resets in 45m) · 7d 91%')
+  expect(otherText(accounts)).toBe('#2  5h 3% ↺ 45m · 7d 91%')
   expect(switchTo(accounts)?.n).toBe(2)
   expect(switchTo(accounts.map(a => ({ ...a, five: 30 })))).toBe(null)
 })

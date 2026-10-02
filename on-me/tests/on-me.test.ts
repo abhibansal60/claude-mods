@@ -10,6 +10,7 @@ test('reads the blocked part in both forms', async () => {
   ])
   expect(parseBlocked('## Blocked on me\nNothing.\n## Changed')).toEqual([])
   expect(parseBlocked('All done.')).toBe(null)
+  expect(parseBlocked('It shows my last "Blocked on me" line, so it changes.')).toBe(null)
   expect(endsWithQuestion('Which one?')).toBe(true)
   expect(endsWithQuestion('Done.')).toBe(false)
 })

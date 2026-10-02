@@ -46,10 +46,17 @@ export const register: Register = on => {
     const others = otherText(m.accounts)
     if (!others && !to) return below
 
+    // The status line shows this session's account; the tag says this is the other one.
     const mine = to ? (
-      <Text key="twin-meter" color="cyan">{`switch to account ${to.n}: 5h ${to.five}% used · cswap switch ${to.n}`}</Text>
+      <Text key="twin-meter">
+        <Text backgroundColor="cyan" color="black" bold>{' SWITCH '}</Text>
+        <Text color="cyan">{` to #${to.n} (5h ${to.five}%): cswap switch ${to.n}`}</Text>
+      </Text>
     ) : (
-      <Text key="twin-meter" dimColor>{others}</Text>
+      <Text key="twin-meter">
+        <Text backgroundColor="magenta" color="black" bold>{' OTHER ACCOUNT '}</Text>
+        <Text color="magenta">{` ${others}`}</Text>
+      </Text>
     )
     if (!below) return mine
     return (

@@ -32,8 +32,8 @@ Needs: `twin-meter` and `browser-guard` use [`cswap`](https://pypi.org/project/c
 
 | Mod | Where | What it shows or does |
 |---|---|---|
-| `on-me` | Band, left | One line: `⏳` and the first item from the last answer's *Blocked on me* part (or "answer my question"), `+N` for more; `▶` and the current tool call while Claude works. Nothing when nothing waits on you. |
-| `twin-meter` | Band, right edge | Dim `account 2: 5h 3% (resets in 45m) · 7d 91%` for your *other* `cswap` accounts (the status line already shows the active one). Turns into a cyan `switch to account 2` hint when the active account passes 60% and another has room. |
+| `on-me` | Band, left | One line: a yellow `ON YOU` tag and the first item from the last answer's *Blocked on me* part (or "answer my question"), `+N` for more; a cyan `CLAUDE` tag and the current tool call while Claude works. Nothing when nothing waits on you. |
+| `twin-meter` | Band, right edge | A magenta `OTHER ACCOUNT` tag with `#2  5h 3% ↺ 45m · 7d 91%` for your *other* `cswap` accounts (the status line already shows the active one). Turns into a cyan `SWITCH` tag when the active account passes 60% and another has room. |
 | `ship-state` | Pane, `/ship-state` | Each repo the session touched: branch, uncommitted files, unpushed commits, last CI run, commit statuses on HEAD (Vercel deploys) and PyPI against the local version. A toast when an answer says "done" but a repo is not shipped. |
 | `browser-guard` | Hook on Chrome tools | Pairs each `cswap` account with a Chrome browser on first use, then stops Chrome actions from the wrong profile. `/browser-guard` lists pairs, `/browser-guard reset` forgets them. |
 | `herdr-fleet` | Pane, `/herdr-fleet` | Every herdr agent with status, folder, title and last words, "◉ you are here" on this pane, a focus button, a toast when another agent is blocked. Stops Bash commands that would close this pane or herdr. |

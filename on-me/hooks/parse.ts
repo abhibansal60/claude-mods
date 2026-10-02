@@ -1,3 +1,4 @@
+const LABEL = /^\s*(#{1,6}\s*|\*\*|__)?blocked on me\b/i
 const NONE = /^(nothing|none|no\b|n\/a|-|—)/i
 const NEXT_PART = /^\s*(#{1,6}\s|\*\*(changed|found)\b|(changed|found):)/i
 
@@ -6,9 +7,10 @@ const NEXT_PART = /^\s*(#{1,6}\s|\*\*(changed|found)\b|(changed|found):)/i
 // null when the answer has no such part.
 export function parseBlocked(answer: string): string[] | null {
   const lines = answer.split('\n')
-  const at = lines.findIndex(l => /blocked on me/i.test(l))
+  // Only a heading or label that starts the line, never the words inside a sentence.
+  const at = lines.findIndex(l => LABEL.test(l))
   if (at === -1) return null
-  const inline = lines[at]!.replace(/^.*blocked on me\W*/i, '').trim()
+  const inline = lines[at]!.replace(LABEL, '').replace(/^[\s:*]+/, '').trim()
   const items: string[] = []
   if (inline) items.push(inline)
   for (const line of lines.slice(at + 1)) {

@@ -1,6 +1,6 @@
 {
   "name": "twin-meter",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "description": "5h and 7d limits of both cswap accounts in the band above the prompt",
   "types": "./types/index.d.ts",
   "author": {

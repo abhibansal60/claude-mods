@@ -42,11 +42,19 @@ export const register: Register = on => {
 
     const first = plain(s.items[0] ?? '')
     const more = s.items.length > 1 ? `  +${s.items.length - 1}` : ''
+    // A colored tag sets the band apart from transcript rows and logs.
     const mine =
       e.props.isWorking && s.doing ? (
-        <Text key="on-me" color="cyan" dimColor wrap="truncate-end">{`▶ ${plain(s.doing)}`}</Text>
+        <Text key="on-me" wrap="truncate-end">
+          <Text backgroundColor="cyan" color="black" bold>{' CLAUDE '}</Text>
+          <Text color="cyan">{` ${plain(s.doing)}`}</Text>
+        </Text>
       ) : first ? (
-        <Text key="on-me" color="yellow" wrap="truncate-end">{`⏳ ${first}${more}`}</Text>
+        <Text key="on-me" wrap="truncate-end">
+          <Text backgroundColor="yellow" color="black" bold>{' ON YOU '}</Text>
+          <Text color="yellow">{` ${first}`}</Text>
+          <Text dimColor>{more}</Text>
+        </Text>
       ) : null
 
     if (!mine || !below) return mine ?? below

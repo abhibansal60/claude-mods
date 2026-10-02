@@ -36,6 +36,6 @@ export function switchTo(accounts: Account[]): Account | null {
 export function otherText(accounts: Account[]): string {
   return accounts
     .filter(a => !a.isActive)
-    .map(a => `account ${a.n}: 5h ${a.five}%${a.fiveReset ? ` (resets in ${a.fiveReset})` : ''} · 7d ${a.week}%`)
+    .map(a => `#${a.n}  5h ${a.five}%${a.fiveReset ? ` ↺ ${a.fiveReset}` : ''} · 7d ${a.week}%`)
     .join('   ')
 }
