@@ -64,8 +64,9 @@ export const register: Register = on => {
     )
     if (!below) return mine
     return (
-      <Box flexDirection="row" justifyContent="space-between" gap={2} width={e.props.bodyColumns}>
-        <Box flexShrink={1}>{below}</Box>
+      // The engine refuses another hook's tree under a sized Box, so `below` sits bare in a plain row.
+      <Box flexDirection="row" gap={3}>
+        {below}
         <Box flexShrink={0}>{mine}</Box>
       </Box>
     )
