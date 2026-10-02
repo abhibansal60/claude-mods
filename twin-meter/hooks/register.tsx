@@ -2,7 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
 import type { Account, Meter } from '../types'
-import { circled, otherText, parseCswap, switchTo } from './parse'
+import { otherText, parseCswap, switchTo } from './parse'
 
 const meter = atom({ plugin: 'twin-meter', key: 'meter' } as const, null)
 
@@ -14,16 +14,7 @@ async function refresh($: EngineInterface) {
   if (exitCode !== 0) return
   const accounts = parseCswap(stdout)
   if (accounts.length === 0) return
-  const active = accounts.find(a => a.isActive)
-  await update($, meter, (old: Meter | null): Meter => {
-    // Restart the session baseline when the account changes or its 5h window resets.
-    const isSame = old?.startEmail === active?.email && (old?.startFive ?? 0) <= (active?.five ?? 0)
-    return {
-      accounts,
-      startFive: isSame ? old!.startFive : active?.five ?? null,
-      startEmail: active?.email ?? null,
-    }
-  })
+  await update($, meter, (): Meter => ({ accounts }))
 }
 
 export const register: Register = on => {
@@ -51,22 +42,21 @@ export const register: Register = on => {
     if (e.props.hasSurvey || !m) return below
 
     const { Box, Text } = $.ui.resolve(e)
-    const active = m.accounts.find((a: Account) => a.isActive)
-    const used = active && m.startFive !== null ? active.five - m.startFive : 0
     const to = switchTo(m.accounts)
     const others = otherText(m.accounts)
     if (!others && !to) return below
 
     const mine = to ? (
-      <Text key="twin-meter" color="cyan">{`⇄ switch to ${circled(to.n)} · ${to.five}% used  (cswap switch ${to.n})`}</Text>
+      <Text key="twin-meter" color="cyan">{`switch to account ${to.n}: 5h ${to.five}% used · cswap switch ${to.n}`}</Text>
     ) : (
-      <Text key="twin-meter" dimColor>{`⇄ ${others}${used >= 10 ? `  · here +${used}%` : ''}`}</Text>
+      <Text key="twin-meter" dimColor>{others}</Text>
     )
     if (!below) return mine
     return (
       // The engine refuses another hook's tree under a sized Box, so `below` sits bare in a plain row.
       <Box flexDirection="row" gap={3}>
         {below}
+        <Box flexGrow={1} />
         <Box flexShrink={0}>{mine}</Box>
       </Box>
     )

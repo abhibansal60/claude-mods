@@ -10,9 +10,6 @@ export type Account = {
 
 export type Meter = {
   accounts: Account[]
-  // 5h percent of the active account when this session first saw it
-  startFive: number | null
-  startEmail: string | null
 }
 
 declare module 'claude-code' {

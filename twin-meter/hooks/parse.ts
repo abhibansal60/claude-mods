@@ -24,9 +24,6 @@ export function parseCswap(text: string): Account[] {
   return accounts
 }
 
-const CIRCLED = ['⓪', '①', '②', '③', '④', '⑤']
-export const circled = (n: number) => CIRCLED[n] ?? `(${n})`
-
 // The account to switch to, when the active one is getting full and another has room.
 export function switchTo(accounts: Account[]): Account | null {
   const active = accounts.find(a => a.isActive)
@@ -39,6 +36,6 @@ export function switchTo(accounts: Account[]): Account | null {
 export function otherText(accounts: Account[]): string {
   return accounts
     .filter(a => !a.isActive)
-    .map(a => `${circled(a.n)} ${a.five}%${a.fiveReset ? ` ↻${a.fiveReset}` : ''} · 7d ${a.week}%`)
-    .join('  ')
+    .map(a => `account ${a.n}: 5h ${a.five}%${a.fiveReset ? ` (resets in ${a.fiveReset})` : ''} · 7d ${a.week}%`)
+    .join('   ')
 }
