@@ -2,6 +2,8 @@
 
 Claude Code mods (plugins of function hooks) built from how I actually use Claude Code: two accounts rotated with `cswap`, many parallel sessions in herdr, and checking results rather than diffs.
 
+![on-me and twin-meter in the band above the prompt, ship-state in the side pane, on a real repo](docs/on-you-band-and-ship-state.png)
+
 ## Start here: paste this to your agent
 
 ```
