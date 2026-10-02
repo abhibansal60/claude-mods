@@ -1,0 +1,1 @@
+{ "name": "ship-state", "version": "0.1.0", "description": "Pane: uncommitted, unpushed, CI and deploy state of each repo this session touched", "types": "./types/index.d.ts" }

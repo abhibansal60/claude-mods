@@ -1,0 +1,1 @@
+{ "name": "browser-guard", "version": "0.1.0", "description": "Stops Chrome actions when the Chrome profile is not the one paired with the active cswap account" }

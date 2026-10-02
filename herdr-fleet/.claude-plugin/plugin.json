@@ -1,0 +1,1 @@
+{ "name": "herdr-fleet", "version": "0.1.0", "description": "Pane: every herdr agent, its status and last words, with this pane marked", "types": "./types/index.d.ts" }
