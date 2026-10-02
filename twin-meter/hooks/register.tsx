@@ -64,7 +64,8 @@ export const register: Register = on => {
       <Box flexDirection="row" gap={3}>
         {below}
         <Box flexGrow={1} />
-        <Box flexShrink={0}>{mine}</Box>
+        {/* Room for the band's own [-] control at the right edge. */}
+        <Box flexShrink={0} paddingRight={4}>{mine}</Box>
       </Box>
     )
   })
