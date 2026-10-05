@@ -1,0 +1,29 @@
+name: CI
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  mods:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      # No login needed: validate reads each mod the way the engine will, test runs its *.test.ts.
+      - run: npm install -g @anthropic-ai/claude-code
+      - name: Validate and test every mod
+        run: |
+          set -e
+          for manifest in */.claude-plugin/plugin.json; do
+            mod=${manifest%%/*}
+            echo "::group::$mod"
+            claude plugin validate "./$mod"
+            claude plugin test "./$mod"
+            echo "::endgroup::"
+          done
+          claude plugin validate .
