@@ -17,4 +17,10 @@ test('agents, last words and the kill guard', async () => {
   expect(killsMe('herdr tab close w5:t7', 'w5:pJ', 'w5:tJ')).toBe(false)
   expect(killsMe('pkill -f herdr', 'w5:pJ', 'w5:tJ')).toBe(true)
   expect(killsMe('herdr agent list', 'w5:pJ', 'w5:tJ')).toBe(false)
+  // via the agent's own env vars
+  expect(killsMe('herdr pane close "$HERDR_PANE_ID"', 'w5:pJ', 'w5:tJ')).toBe(true)
+  expect(killsMe('herdr tab close ${HERDR_TAB_ID}', 'w5:pJ', 'w5:tJ')).toBe(true)
+  // whole ids only
+  expect(killsMe('herdr pane close w1:p12', 'w1:p1', 'w1:t1')).toBe(false)
+  expect(killsMe('herdr pane close w1:p1', 'w1:p1', 'w1:t1')).toBe(true)
 })
