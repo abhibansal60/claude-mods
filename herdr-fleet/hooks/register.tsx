@@ -12,17 +12,23 @@ const COLOR: Record<Agent['status'], string | undefined> = { working: 'cyan', bl
 
 async function refresh($: EngineInterface) {
   const me = (await $.env.get('HERDR_PANE_ID')) ?? ''
-  const home = (await $.env.get('HOME')) ?? ''
+  const config = (await $.env.get('CLAUDE_CONFIG_DIR')) ?? `${(await $.env.get('HOME')) ?? ''}/.claude`
   const listed = await $.process.run(['herdr', 'agent', 'list'], { timeoutMs: 10000 }).catch(() => null)
   if (!listed || listed.exitCode !== 0) return
+  let found: ReturnType<typeof parseAgents>
+  try {
+    found = parseAgents(listed.stdout, me)
+  } catch {
+    return // herdr printed something other than the JSON we know; keep the last list
+  }
   const old = await read($, agents)
   const next: Agent[] = []
-  for (const a of parseAgents(listed.stdout, me)) {
+  for (const a of found) {
     const before = old.find((o: Agent) => o.pane === a.pane)
     let said = before?.said ?? ''
     // Read the log again only when the agent changed state.
     if (a.sessionId && (!before || before.seq !== a.seq)) {
-      const log = `${home}/.claude/projects/${projectDir(a.cwd)}/${a.sessionId}.jsonl`
+      const log = `${config}/projects/${projectDir(a.cwd)}/${a.sessionId}.jsonl`
       const tail = await $.process.run(['tail', '-c', '300000', log]).catch(() => null)
       if (tail?.exitCode === 0) said = lastSaid(tail.stdout)
     }

@@ -10,8 +10,9 @@ let lastRun = 0
 
 async function refresh($: EngineInterface) {
   lastRun = await $.clock.now()
-  const { exitCode, stdout } = await $.process.run(['cswap', 'list'], { timeoutMs: 20000 })
-  if (exitCode !== 0) return
+  const listed = await $.process.run(['cswap', 'list'], { timeoutMs: 20000 }).catch(() => null)
+  if (!listed || listed.exitCode !== 0) return
+  const { stdout } = listed
   const accounts = parseCswap(stdout)
   if (accounts.length === 0) return
   await update($, meter, (): Meter => ({ accounts }))

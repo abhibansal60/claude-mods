@@ -8,7 +8,10 @@ const PANE = 'ship-state'
 const roots = atom({ plugin: 'ship-state', key: 'roots' } as const, [])
 const rows = atom({ plugin: 'ship-state', key: 'rows' } as const, [])
 
-let isRefreshing = false
+let running: Promise<void> | null = null
+let queued: Promise<void> | null = null
+// Folder -> its git root (null: not a repo). Saves a git spawn on every Read/Edit/Bash of a seen folder.
+const rootOf = new Map<string, string | null>()
 
 async function sh($: EngineInterface, argv: string[], cwd: string) {
   try {
@@ -20,11 +23,17 @@ async function sh($: EngineInterface, argv: string[], cwd: string) {
 
 // Adds the git root of each dir to the watched list.
 async function track($: EngineInterface, dirs: string[]) {
-  const known = await read($, roots)
   for (const dir of dirs) {
+    if (rootOf.has(dir)) continue
+    const known = await read($, roots)
+    if (known.some((r: string) => dir === r || dir.startsWith(`${r}/`))) {
+      rootOf.set(dir, null)
+      continue
+    }
     const { exitCode, stdout } = await sh($, ['git', '-C', dir, 'rev-parse', '--show-toplevel'], '/')
-    const root = stdout.trim()
-    if (exitCode !== 0 || !root || known.includes(root)) continue
+    const root = exitCode === 0 ? stdout.trim() : ''
+    rootOf.set(dir, root || null)
+    if (!root || known.includes(root)) continue
     await update($, roots, (list: string[]) => (list.includes(root) ? list : [...list, root]))
     if ((await read($, roots)).length === 1) void $.ui.open({ id: PANE, title: 'Ship state' })
   }
@@ -38,7 +47,7 @@ async function check($: EngineInterface, root: string): Promise<RepoRow> {
   const checks: Record<string, string> = {}
   if (hasRemote) {
     const runs = await sh($, ['gh', 'run', 'list', '-L', '1', '--json', 'workflowName,status,conclusion,url'], root)
-    const run = runs.exitCode === 0 ? (JSON.parse(runs.stdout || '[]')[0] as Record<string, string> | undefined) : undefined
+    const run = runs.exitCode === 0 ? (parseJson(runs.stdout)?.[0] as Record<string, string> | undefined) : undefined
     if (run) ci = { name: run.workflowName ?? '', status: run.status ?? '', conclusion: run.conclusion ?? '', url: run.url ?? '' }
     const sha = (await sh($, ['git', 'rev-parse', 'HEAD'], root)).stdout.trim()
     const st = await sh($, ['gh', 'api', `repos/{owner}/{repo}/commits/${sha}/status`, '--jq', '.statuses[] | [.context, .state] | @tsv'], root)
@@ -51,7 +60,7 @@ async function check($: EngineInterface, root: string): Promise<RepoRow> {
   const project = await $.fs.read(`${root}/pyproject.toml`).then(pyproject, () => null)
   if (project) {
     const res = await $.http.fetch(`https://pypi.org/pypi/${project.name}/json`).catch(() => null)
-    const live = res?.ok ? (JSON.parse(res.text).info?.version as string) : '?'
+    const live = res?.ok ? ((parseJson(res.text)?.info?.version as string | undefined) ?? '?') : '?'
     pypi = { local: project.version, live }
   }
   return {
@@ -68,16 +77,28 @@ async function check($: EngineInterface, root: string): Promise<RepoRow> {
   }
 }
 
-async function refresh($: EngineInterface) {
-  if (isRefreshing) return
-  isRefreshing = true
+function parseJson(text: string): any {
   try {
-    const list: RepoRow[] = []
-    for (const root of await read($, roots)) list.push(await check($, root))
-    await update($, rows, () => list)
-  } finally {
-    isRefreshing = false
+    return JSON.parse(text || 'null')
+  } catch {
+    return null
   }
+}
+
+async function refreshNow($: EngineInterface) {
+  const list: RepoRow[] = []
+  for (const root of await read($, roots)) list.push(await check($, root))
+  await update($, rows, () => list)
+}
+
+// One refresh at a time. A call during a refresh waits for one more after it, so callers that read rows
+// afterwards (warnIfUnshipped) always see state from after their call, never an old snapshot.
+function refresh($: EngineInterface): Promise<void> {
+  if (!running) return (running = refreshNow($).finally(() => (running = null)))
+  return (queued ??= running.then(() => {
+    queued = null
+    return refresh($)
+  }))
 }
 
 const isRed = (r: RepoRow) => r.ci?.conclusion === 'failure' || Object.values(r.checks).some(s => s === 'failure' || s === 'error')
