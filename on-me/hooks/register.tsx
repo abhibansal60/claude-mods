@@ -16,7 +16,8 @@ export const register: Register = on => {
     if (!e.agentId) {
       const input = e as unknown as { description?: string; command?: string; file_path?: string }
       const doing = input.description ?? `${String(e.tool)} ${input.file_path ?? input.command ?? ''}`
-      await update($, state, (s: OnMe) => ({ ...s, doing: short(doing.trim(), 60) }))
+      // The band follows; the tool call never waits on it.
+      void update($, state, (s: OnMe) => ({ ...s, doing: short(doing.trim(), 60) }))
     }
     return next(e)
   })
