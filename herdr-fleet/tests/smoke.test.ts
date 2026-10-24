@@ -75,3 +75,21 @@ test('smoke: the pane lists agents, marks this one, and a newly blocked agent to
   await clock.advance(20_000)
   expect(toasts).toEqual(['herdr: other needs you (blocked)'])
 })
+
+test('smoke: a slow herdr does not stack refreshes', async ($, on) => {
+  const clock = mock.clock(on)
+  mock.env(on, IN_HERDR)
+  let lists = 0
+  on('process.run', async (_, e) => {
+    if (e.argv[2] !== 'list') return exited(LOG)
+    lists++
+    await clock.sleep(25_000)
+    return exited(AGENTS)
+  })
+  on('command.register', (_, e) => ({ value: { command: e.name } }))
+  on('session.start', (_, e) => ({ cwd: e.cwd }))
+  await $.session.start({ cwd: '/', surface: null, isInteractive: false })
+  await clock.advance(20_000)
+  expect(lists).toBe(1)
+  await clock.advance(10_000)
+})

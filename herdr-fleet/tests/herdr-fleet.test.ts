@@ -23,4 +23,13 @@ test('agents, last words and the kill guard', async () => {
   // whole ids only
   expect(killsMe('herdr pane close w1:p12', 'w1:p1', 'w1:t1')).toBe(false)
   expect(killsMe('herdr pane close w1:p1', 'w1:p1', 'w1:t1')).toBe(true)
+  // stopping the session stops this pane with it
+  expect(killsMe('herdr session stop', 'w1:p1', 'w1:t1')).toBe(true)
+  expect(killsMe('herdr session list', 'w1:p1', 'w1:t1')).toBe(false)
+  // a target the guard cannot read could be this pane
+  expect(killsMe('herdr pane close $(herdr pane current --id)', 'w1:p1', 'w1:t1')).toBe(true)
+  expect(killsMe('P=w1:p1; herdr pane close "$P"', 'w1:p1', 'w1:t1')).toBe(true)
+  expect(killsMe('herdr pane close `herdr pane current`', 'w1:p1', 'w1:t1')).toBe(true)
+  // a variable elsewhere in the command does not count
+  expect(killsMe('herdr pane close w1:p2 && echo $HOME', 'w1:p1', 'w1:t1')).toBe(false)
 })
