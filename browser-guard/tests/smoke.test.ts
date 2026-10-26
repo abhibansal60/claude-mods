@@ -71,8 +71,9 @@ test('smoke: tools other than Chrome actions pass untouched', async ($, on) => {
 })
 
 test('smoke: a dismissed pairing question stops the Chrome action', async ($, on) => {
-  const { acted } = engine(on, { account: status(1, 'a@x.com'), browsers: [one], answer: null })
+  const { acted, asked } = engine(on, { account: status(1, 'a@x.com'), browsers: [one], answer: null })
   await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
-  expect((await $.tool.call({ tool: `${CHROME}navigate`, url: 'https://example.com' })).deny).toMatch(/browser-guard/)
+  expect((await $.tool.call({ tool: `${CHROME}navigate`, url: 'https://example.com' })).deny).toMatch(/browser-guard: nobody answered/)
+  expect(asked.length).toBe(1)
   expect(acted).toEqual([])
 })
