@@ -32,4 +32,11 @@ test('agents, last words and the kill guard', async () => {
   expect(killsMe('herdr pane close `herdr pane current`', 'w1:p1', 'w1:t1')).toBe(true)
   // a variable elsewhere in the command does not count
   expect(killsMe('herdr pane close w1:p2 && echo $HOME', 'w1:p1', 'w1:t1')).toBe(false)
+  expect(killsMe('herdr pane close "${HERDR_PANE_ID:-}"', 'w1:p1', 'w1:t1')).toBe(true)
+  expect(killsMe("herdr agent list | jq -r '.result.agents[0].pane_id' | xargs herdr pane close", 'w1:p1', 'w1:t1')).toBe(true)
+  expect(killsMe('herdr pane current | xargs -I{} herdr pane close {}', 'w1:p1', 'w1:t1')).toBe(true)
+  expect(killsMe('kill $(pgrep herdr)', 'w1:p1', 'w1:t1')).toBe(true)
+  expect(killsMe('pgrep -f herdr | xargs kill -9', 'w1:p1', 'w1:t1')).toBe(true)
+  expect(killsMe('pgrep -a herdr', 'w1:p1', 'w1:t1')).toBe(false)
+  expect(killsMe('herdr pane close w1:p2; echo w1:p1', 'w1:p1', 'w1:t1')).toBe(false)
 })

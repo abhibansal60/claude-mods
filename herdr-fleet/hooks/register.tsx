@@ -36,7 +36,7 @@ async function refreshNow($: EngineInterface) {
     // Read the log again only when the agent changed state.
     if (a.sessionId && (!before || before.seq !== a.seq)) {
       const log = `${config}/projects/${projectDir(a.cwd)}/${a.sessionId}.jsonl`
-      const tail = await $.process.run(['tail', '-c', '300000', log]).catch(() => null)
+      const tail = await $.process.run(['tail', '-c', '300000', log], { timeoutMs: 10000 }).catch(() => null)
       if (tail?.exitCode === 0) said = lastSaid(tail.stdout)
     }
     if (before && before.status !== 'blocked' && a.status === 'blocked' && !a.isMe) {

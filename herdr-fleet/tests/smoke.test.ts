@@ -91,5 +91,8 @@ test('smoke: a slow herdr does not stack refreshes', async ($, on) => {
   await $.session.start({ cwd: '/', surface: null, isInteractive: false })
   await clock.advance(20_000)
   expect(lists).toBe(1)
-  await clock.advance(10_000)
+  // Once the slow one ends, the next tick refreshes again.
+  await clock.advance(20_000)
+  expect(lists).toBe(2)
+  await clock.advance(25_000)
 })
