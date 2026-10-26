@@ -12,7 +12,7 @@ const PANE = {
 const exited = (stdout = '', exitCode = 0) => ({ value: { exitCode, stdout, stderr: '', isStdoutTruncated: false, isStderrTruncated: false } })
 const turn = (answer: string) => ({ answer, durationMs: 1, isAborted: false, turnId: 't1', reason: 'answer' as const })
 
-// A fake host: every folder under /home/me/code/<repo> is a repo on GitHub, `status` its porcelain output.
+// A fake host: every folder under /home/me/code/<repo> except notes is a repo on GitHub, `status` its porcelain output.
 function engine(on: On, status: Record<string, string>) {
   const clock = mock.clock(on)
   mock.env(on, { HOME: '/home/me', PWD: '/home/me/code/app' })
@@ -24,7 +24,7 @@ function engine(on: On, status: Record<string, string>) {
     const cwd = e.init?.cwd ?? ''
     if (argv[3] === 'rev-parse' && argv[4] === '--show-toplevel') {
       const root = argv[2]!.match(/^\/home\/me\/code\/[^/]+/)?.[0]
-      return root ? exited(root) : exited('', 128)
+      return root && !root.endsWith('/notes') ? exited(root) : exited('', 128)
     }
     if (argv[1] === 'status') return exited(status[cwd] ?? '## main...origin/main')
     if (argv[1] === 'remote') return exited(`git@github.com:me/${cwd.split('/').pop()}.git`)
@@ -74,7 +74,7 @@ test('smoke: an answer that says done while a repo is unpushed raises a toast; a
   expect(toasts.length).toBe(1)
 })
 
-test('smoke: a tool call naming another ~/code repo adds it, and a repo seen once is not asked again', async ($, on) => {
+test('smoke: a tool call naming another ~/code repo adds it, and a folder seen once is not asked again', async ($, on) => {
   const { clock, ran } = engine(on, {})
   await $.session.start({ cwd: '/home/me/code/app', surface: 'terminal', isInteractive: true })
   await clock.settle()
@@ -82,10 +82,12 @@ test('smoke: a tool call naming another ~/code repo adds it, and a repo seen onc
   await $.tool.call({ tool: 'Read', file_path: '/home/me/code/lib/src/a.ts' })
   await $.tool.call({ tool: 'Read', file_path: '/home/me/code/lib/src/b.ts' })
   await $.tool.call({ tool: 'Bash', command: 'git -C ~/code/lib push' })
+  await $.tool.call({ tool: 'Read', file_path: '/home/me/code/notes/a.md' })
+  await $.tool.call({ tool: 'Read', file_path: '/home/me/code/notes/b.md' })
   await clock.settle()
 
   const lookups = ran.filter(a => a[3] === 'rev-parse' && a[4] === '--show-toplevel').map(a => a[2])
-  expect(lookups).toEqual(['/home/me/code/app', '/home/me/code/lib'])
+  expect(lookups).toEqual(['/home/me/code/app', '/home/me/code/lib', '/home/me/code/notes'])
   const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
   expect(await ui.find({ type: 'Text', text: /lib main/ })).toBeDefined()
   await ui.unmount()

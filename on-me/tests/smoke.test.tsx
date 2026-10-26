@@ -35,11 +35,13 @@ test('smoke: the band shows the tool call while Claude works', async ($, on) => 
 test('smoke: the band shows what an answer left on the person, and nothing when nothing waits', async ($, on) => {
   engine(on)
   await $.turn.complete(turn('Done.\n\n## Blocked on me\n- add the **DNS** record\n- vercel login\n\n## Changed\n- x'))
-  const ui = await $.ui.mount({ ...band(false), surface: 'terminal' })
-  const row = (await ui.find({ type: 'Text', text: /ON YOU/ }))?.text
-  expect(row).toMatch(/add the DNS record/)
-  expect(row).toMatch(/\+1/)
-  await ui.unmount()
+  for (const surface of ['terminal', 'desktop'] as const) {
+    const ui = await $.ui.mount({ ...band(false), surface })
+    const row = (await ui.find({ type: 'Text', text: /ON YOU/ }))?.text
+    expect(row).toMatch(/add the DNS record/)
+    expect(row).toMatch(/\+1/)
+    await ui.unmount()
+  }
 
   await $.turn.complete(turn('## Blocked on me\nNothing.'))
   const empty = await $.ui.mount({ ...band(false), surface: 'terminal' })
@@ -49,8 +51,11 @@ test('smoke: the band shows what an answer left on the person, and nothing when 
 
 test('smoke: a subagent turn leaves the band alone', async ($, on) => {
   engine(on)
+  await $.turn.complete(turn('## Blocked on me\n- real item'))
   await $.turn.complete({ ...turn('## Blocked on me\n- from a subagent'), agentId: 'a1' })
+  await $.turn.complete({ ...turn('Done, nothing blocked.'), agentId: 'a2' })
   const ui = await $.ui.mount({ ...band(false), surface: 'terminal' })
+  expect((await ui.find({ type: 'Text', text: /ON YOU/ }))?.text).toMatch(/real item/)
   expect(await ui.find({ type: 'Text', text: /subagent/ })).toBe(undefined)
   await ui.unmount()
 })

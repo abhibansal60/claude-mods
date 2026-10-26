@@ -25,7 +25,7 @@ function engine(on: On, env: Record<string, string>, agents = () => AGENTS) {
   on('process.run', (_, e) => {
     ran.push([...e.argv])
     if (e.argv[0] === 'herdr' && e.argv[2] === 'list') return exited(agents())
-    if (e.argv[0] === 'tail') return exited(LOG)
+    if (e.argv[0] === 'tail') return /^\/home\/me\/\.claude\/projects\/-home-me-code-[ab]\/s[12]\.jsonl$/.test(e.argv[3]!) ? exited(LOG) : exited('', 1)
     return exited()
   })
   on('command.register', (_, e) => ({ value: { command: e.name } }))
@@ -70,7 +70,8 @@ test('smoke: the pane lists agents, marks this one, and a newly blocked agent to
     await ui.unmount()
   }
 
-  agents = AGENTS.replace('"idle"', '"blocked"').replace('"state_change_seq":1,"agent_session":{"value":"s2"}', '"state_change_seq":2,"agent_session":{"value":"s2"}')
+  // Both panes turn blocked; only the other one is worth a toast.
+  agents = AGENTS.replace(/"(idle|working)"/g, '"blocked"').replaceAll('"state_change_seq":1', '"state_change_seq":2')
   await clock.advance(20_000)
   expect(toasts).toEqual(['herdr: other needs you (blocked)'])
 })
