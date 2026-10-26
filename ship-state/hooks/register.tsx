@@ -59,7 +59,9 @@ async function check($: EngineInterface, root: string): Promise<RepoRow> {
   let pypi: RepoRow['pypi'] = null
   const project = await $.fs.read(`${root}/pyproject.toml`).then(pyproject, () => null)
   if (project) {
-    const res = await $.http.fetch(`https://pypi.org/pypi/${encodeURIComponent(project.name)}/json`).catch(() => null)
+    // PEP 503 name, so `Tidy_AI` asks for tidy-ai and not a redirect.
+    const name = project.name.toLowerCase().replace(/[-_.]+/g, '-')
+    const res = await $.http.fetch(`https://pypi.org/pypi/${encodeURIComponent(name)}/json`).catch(() => null)
     // 404: never published, so there is nothing to compare against.
     if (res?.status !== 404) {
       const live = res?.ok ? ((parseJson(res.text)?.info?.version as string | undefined) ?? '?') : '?'
@@ -109,13 +111,22 @@ const isRed = (r: RepoRow) => r.ci?.conclusion === 'failure' || Object.values(r.
 const isUnshipped = (r: RepoRow) => r.ahead !== 0 || r.dirty > 0 || (r.pypi !== null && r.pypi.live !== '?' && r.pypi.local !== r.pypi.live)
 const isRunning = (r: RepoRow) => (r.ci !== null && r.ci.status !== 'completed') || Object.values(r.checks).includes('pending')
 
-async function trackFrom($: EngineInterface, text: string, command: string | undefined) {
-  await track($, repoDirs(text, (await $.env.get('HOME')) ?? ''))
-  if (command && SHIPPING.test(command)) await refresh($)
+// Tracks run one after another off the tool's path: a folder is looked up once, and the end of the turn
+// can wait for every repo the turn touched.
+let tracking: Promise<void> = Promise.resolve()
+
+function trackFrom($: EngineInterface, text: string, command: string | undefined) {
+  tracking = tracking
+    .then(async () => {
+      await track($, repoDirs(text, (await $.env.get('HOME')) ?? ''))
+      if (command && SHIPPING.test(command)) void refresh($)
+    })
+    .catch(() => {})
 }
 
 // Refreshes after the turn without holding it, then warns when the answer claimed a ship that did not happen.
 async function warnIfUnshipped($: EngineInterface, claimsDone: boolean) {
+  await tracking
   await refresh($)
   const bad = (await read($, rows)).filter((r: RepoRow) => isRed(r) || isUnshipped(r))
   if (claimsDone && bad.length > 0) $.ui.toast(`Said done, but not shipped: ${bad.map((r: RepoRow) => r.name).join(', ')}`)
@@ -145,7 +156,7 @@ export const register: Register = on => {
     const input = e as unknown as { command?: string; file_path?: string; notebook_path?: string }
     const text = input.command ?? input.file_path ?? input.notebook_path
     // Never hold the tool's result for a git lookup: track after it returns.
-    if (text) void trackFrom($, text, input.command)
+    if (text) trackFrom($, text, input.command)
     return ran
   })
 
@@ -184,8 +195,8 @@ export const register: Register = on => {
               </Text>
             ))}
             {r.pypi && (
-              <Text color={r.pypi.local === r.pypi.live ? undefined : 'yellow'}>
-                PyPI {r.pypi.live} {r.pypi.local === r.pypi.live ? '= local' : `≠ local ${r.pypi.local}`}
+              <Text color={r.pypi.local === r.pypi.live || r.pypi.live === '?' ? undefined : 'yellow'} dimColor={r.pypi.live === '?'}>
+                PyPI {r.pypi.live === '?' ? `unreadable, local ${r.pypi.local}` : `${r.pypi.live} ${r.pypi.local === r.pypi.live ? '= local' : `≠ local ${r.pypi.local}`}`}
               </Text>
             )}
           </Box>

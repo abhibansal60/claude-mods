@@ -101,13 +101,24 @@ test('smoke: a tool call naming another ~/code repo adds it, and a folder seen o
 })
 
 test('smoke: a tool result is not held while a new folder is looked up', async ($, on) => {
-  const { clock } = engine(on, {}, { slowLookup: true })
+  const { clock, ran } = engine(on, {}, { slowLookup: true })
   await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
   let isDone = false
   void $.tool.call({ tool: 'Read', file_path: '/home/me/code/lib/a.ts' }).then(() => (isDone = true))
   await clock.settle()
   expect(isDone).toBe(true)
-  await clock.advance(15_000)
+  await clock.advance(30_000)
+  expect(ran).toContainEqual(['git', '-C', '/home/me/code/lib', 'rev-parse', '--show-toplevel'])
+})
+
+test('smoke: a repo first touched by the turn\'s last tool call still counts when the turn ends', async ($, on) => {
+  const { clock, toasts } = engine(on, { '/home/me/code/lib': '## main...origin/main\n M a.ts\n' }, { slowLookup: true })
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  await $.tool.call({ tool: 'Edit', file_path: '/home/me/code/lib/a.ts' })
+  await $.tool.call({ tool: 'Read', file_path: '/home/me/code/lib/b.ts' })
+  await $.turn.complete(turn('Done, pushed.'))
+  await clock.advance(60_000)
+  expect(toasts).toEqual(['Said done, but not shipped: lib'])
 })
 
 test('smoke: the session folder comes from session.start, not $PWD', async ($, on) => {
@@ -130,6 +141,9 @@ for (const [why, pypi] of [
     await $.turn.complete(turn('Done, pushed.'))
     await clock.settle()
     expect(toasts).toEqual([])
+    const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+    expect(await ui.find({ type: 'Text', text: /≠/ })).toBe(undefined)
+    await ui.unmount()
   })
 }
 
