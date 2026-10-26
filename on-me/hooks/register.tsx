@@ -1,5 +1,5 @@
 import { atom, read, update } from 'claude-code'
-import type { Register } from 'claude-code'
+import type { EngineInterface, Register } from 'claude-code'
 
 import type { OnMe } from '../types'
 import { endsWithQuestion, parseBlocked } from './parse'
@@ -11,13 +11,21 @@ const plain = (text: string) => text.replace(/[`*_]/g, '').replace(/\s+/g, ' ').
 
 const short = (text: string, n: number) => (text.length > n ? `${text.slice(0, n - 1)}…` : text)
 
+// Band writes apply in the order they were made, and no tool call or turn waits on them.
+let writes: Promise<void> = Promise.resolve()
+function write($: EngineInterface, f: (s: OnMe) => OnMe) {
+  writes = writes.then(() => update($, state, f)).then(
+    () => {},
+    () => {},
+  )
+}
+
 export const register: Register = on => {
   on('tool.call', async ($, e, next) => {
     if (!e.agentId) {
       const input = e as unknown as { description?: string; command?: string; file_path?: string }
       const doing = input.description ?? `${String(e.tool)} ${input.file_path ?? input.command ?? ''}`
-      // The band follows; the tool call never waits on it.
-      void update($, state, (s: OnMe) => ({ ...s, doing: short(doing.trim(), 60) }))
+      write($, (s: OnMe) => ({ ...s, doing: short(doing.trim(), 60) }))
     }
     return next(e)
   })
@@ -26,7 +34,7 @@ export const register: Register = on => {
     if (!e.agentId) {
       const blocked = parseBlocked(e.answer)
       const asks = endsWithQuestion(e.answer) ? ['answer my question'] : []
-      await update($, state, (s: OnMe) => ({
+      write($, (s: OnMe) => ({
         doing: '',
         items: blocked === null ? [...new Set([...s.items.filter(i => i !== 'answer my question'), ...asks])] : [...blocked, ...asks],
       }))
