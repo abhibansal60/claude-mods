@@ -26,7 +26,18 @@ claude plugin install browser-guard@claude-mods --scope user
 claude plugin install herdr-fleet@claude-mods --scope user
 ```
 
-Then restart Claude Code. Update later with `claude plugin marketplace update claude-mods`.
+Then restart Claude Code.
+
+To update, refresh the catalog and then each installed mod (the first line alone changes no installed mod), then restart Claude Code:
+
+```
+claude plugin marketplace update claude-mods
+claude plugin update on-me@claude-mods
+claude plugin update twin-meter@claude-mods
+claude plugin update ship-state@claude-mods
+claude plugin update browser-guard@claude-mods
+claude plugin update herdr-fleet@claude-mods
+```
 
 Needs: `twin-meter` and `browser-guard` use [`cswap`](https://pypi.org/project/claude-swap/), `herdr-fleet` uses [herdr](https://herdr.dev), `ship-state` uses `git` and `gh`.
 
@@ -42,11 +53,11 @@ Needs: `twin-meter` and `browser-guard` use [`cswap`](https://pypi.org/project/c
 
 ## Develop
 
-Each mod is a plugin: `.claude-plugin/plugin.json`, `hooks/hooks.json`, `hooks/register.tsx`, a `types/index.d.ts` contract for its `$.state`, and pure parsers in `hooks/parse.ts` with tests in `tests/`.
+Each mod is a plugin: `.claude-plugin/plugin.json`, `hooks/hooks.json`, `hooks/register.tsx` (`.ts` for browser-guard), a `types/index.d.ts` contract for its `$.state` (browser-guard keeps its pairs in `$.store` and has none), and pure parsers in `hooks/parse.ts` with tests in `tests/`.
 
 ```
 claude plugin validate ./<mod>
 claude plugin test ./<mod>
 ```
 
-To work on a mod live, run `claude --plugin-dir ./<mod>`: saving a file reloads it.
+To work on a mod live, run `claude --plugin-dir ./<mod>`: saving a file reloads it. That session also writes the mod's types to `.claude-plugin/types/` (git-ignored), which each mod's `tsconfig.json` extends; after that, `npx -p typescript tsc -p ./<mod>` type-checks it. Without such a session the folder is missing and `tsc` fails on the `extends`.
