@@ -13,16 +13,19 @@ const exited = (stdout = '', exitCode = 0) => ({ value: { exitCode, stdout, stde
 const turn = (answer: string) => ({ answer, durationMs: 1, isAborted: false, turnId: 't1', reason: 'answer' as const })
 
 // A fake host: every folder under /home/me/code/<repo> except notes is a repo on GitHub, `status` its porcelain output.
-function engine(on: On, status: Record<string, string>) {
+type Opts = { pyproject?: string; pypi?: () => { status: number; text: string } | null; slowLookup?: boolean }
+
+function engine(on: On, status: Record<string, string>, opts: Opts = {}) {
   const clock = mock.clock(on)
-  mock.env(on, { HOME: '/home/me', PWD: '/home/me/code/app' })
+  mock.env(on, { HOME: '/home/me' })
   const ran: string[][] = []
   const toasts: string[] = []
-  on('process.run', (_, e) => {
+  on('process.run', async (_, e) => {
     const argv = [...e.argv]
     ran.push(argv)
     const cwd = e.init?.cwd ?? ''
     if (argv[3] === 'rev-parse' && argv[4] === '--show-toplevel') {
+      if (opts.slowLookup) await clock.sleep(15_000)
       const root = argv[2]!.match(/^\/home\/me\/code\/[^/]+/)?.[0]
       return root && !root.endsWith('/notes') ? exited(root) : exited('', 128)
     }
@@ -33,7 +36,11 @@ function engine(on: On, status: Record<string, string>) {
     if (argv[0] === 'gh' && argv[1] === 'api') return exited('Vercel\tsuccess\n')
     return exited('', 1)
   })
-  on('fs.read', () => ({ deny: 'ENOENT' }))
+  on('fs.read', () => (opts.pyproject ? { value: opts.pyproject } : { deny: 'ENOENT' }))
+  on('http.fetch', () => {
+    const res = opts.pypi?.()
+    return res ? { value: { ...res, ok: res.status === 200, headers: {} } } : { deny: 'offline' }
+  })
   on('command.register', (_, e) => ({ value: { command: e.name } }))
   on('ui.open', () => ({ value: { isPlaced: true } }))
   on('ui.toast', (_, e) => (toasts.push(e.text), { value: undefined }))
@@ -90,5 +97,64 @@ test('smoke: a tool call naming another ~/code repo adds it, and a folder seen o
   expect(lookups).toEqual(['/home/me/code/app', '/home/me/code/lib', '/home/me/code/notes'])
   const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
   expect(await ui.find({ type: 'Text', text: /lib main/ })).toBeDefined()
+  await ui.unmount()
+})
+
+test('smoke: a tool result is not held while a new folder is looked up', async ($, on) => {
+  const { clock, ran } = engine(on, {}, { slowLookup: true })
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  let isDone = false
+  void $.tool.call({ tool: 'Read', file_path: '/home/me/code/lib/a.ts' }).then(() => (isDone = true))
+  await clock.settle()
+  expect(isDone).toBe(true)
+  await clock.advance(30_000)
+  expect(ran).toContainEqual(['git', '-C', '/home/me/code/lib', 'rev-parse', '--show-toplevel'])
+})
+
+test('smoke: a repo first touched by the turn\'s last tool call still counts when the turn ends', async ($, on) => {
+  const { clock, toasts } = engine(on, { '/home/me/code/lib': '## main...origin/main\n M a.ts\n' }, { slowLookup: true })
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  await $.tool.call({ tool: 'Edit', file_path: '/home/me/code/lib/a.ts' })
+  await $.tool.call({ tool: 'Read', file_path: '/home/me/code/lib/b.ts' })
+  await $.turn.complete(turn('Done, pushed.'))
+  await clock.advance(60_000)
+  expect(toasts).toEqual(['Said done, but not shipped: lib'])
+})
+
+test('smoke: the session folder comes from session.start, not $PWD', async ($, on) => {
+  const { clock, ran } = engine(on, {})
+  await $.session.start({ cwd: '/home/me/code/app', surface: 'terminal', isInteractive: true })
+  await clock.settle()
+  expect(ran[0]).toEqual(['git', '-C', '/home/me/code/app', 'rev-parse', '--show-toplevel'])
+})
+
+const PYPROJECT = '[project]\nname = "tidy-ai"\nversion = "0.4.1"\n'
+
+for (const [why, pypi] of [
+  ['never published (404)', () => ({ status: 404, text: '{"message":"Not Found"}' })],
+  ['unreachable', () => null],
+] as const) {
+  test(`smoke: a Python repo whose PyPI project is ${why} does not count as unshipped`, async ($, on) => {
+    const { clock, toasts } = engine(on, {}, { pyproject: PYPROJECT, pypi })
+    await $.session.start({ cwd: '/home/me/code/app', surface: 'terminal', isInteractive: true })
+    await clock.settle()
+    await $.turn.complete(turn('Done, pushed.'))
+    await clock.settle()
+    expect(toasts).toEqual([])
+    const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+    expect(await ui.find({ type: 'Text', text: /≠/ })).toBe(undefined)
+    await ui.unmount()
+  })
+}
+
+test('smoke: a Python repo ahead of PyPI counts as unshipped', async ($, on) => {
+  const { clock, toasts } = engine(on, {}, { pyproject: PYPROJECT, pypi: () => ({ status: 200, text: '{"info":{"version":"0.4.0"}}' }) })
+  await $.session.start({ cwd: '/home/me/code/app', surface: 'terminal', isInteractive: true })
+  await clock.settle()
+  await $.turn.complete(turn('Done, published.'))
+  await clock.settle()
+  expect(toasts).toEqual(['Said done, but not shipped: app'])
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  expect((await ui.find({ type: 'Text', text: /PyPI/ }))?.text).toMatch(/PyPI 0.4.0 ≠ local 0.4.1/)
   await ui.unmount()
 })
