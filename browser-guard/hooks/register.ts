@@ -61,10 +61,13 @@ export const register: Register = on => {
     if (why) return { deny: `browser-guard: ${why}` }
 
     if (!pairs[email]) {
-      const answer = await $.ui.ask(`Chrome "${browser.name}" is about to act. Is it the Chrome profile for ${email}?`, [
-        'Yes, pair them',
-        'No, stop',
-      ])
+      // ask rejects when the person dismisses it, or under -p: that is no yes either, but no "no" from the user.
+      const answer = await $.ui
+        .ask(`Chrome "${browser.name}" is about to act. Is it the Chrome profile for ${email}?`, ['Yes, pair them', 'No, stop'])
+        .catch(() => null)
+      if (answer === null) {
+        return { deny: `browser-guard: nobody answered whether Chrome "${browser.name}" is the profile for ${email} (dismissed, or no one to ask). Pair them in an interactive session first.` }
+      }
       if (!answer.startsWith('Yes')) {
         return { deny: `browser-guard: the user says Chrome "${browser.name}" is not the profile for ${email}. Ask which profile to use.` }
       }
@@ -75,5 +78,8 @@ export const register: Register = on => {
       $.ui.toast(`Chrome: ${browser.name} · ${email.split('@')[0]} · ${input.action ?? tool.slice(CHROME.length)}${input.url ? ` ${input.url}` : ''}`)
     }
     return next(e)
-  })
+  }).catch(($, e, next) =>
+    // A guard that fails must not wave the Chrome action through.
+    next.called ? next(e) : { deny: 'browser-guard: the profile check failed, so this Chrome action was stopped. Try again.' },
+  )
 }
