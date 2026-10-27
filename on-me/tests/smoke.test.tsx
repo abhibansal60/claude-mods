@@ -1,4 +1,4 @@
-import { expect, test } from 'claude-code/testing'
+import { expect, mock, test } from 'claude-code/testing'
 import type { On } from 'claude-code'
 
 // Smoke: drive the hooks module itself with fixture events, nothing real beneath.
@@ -57,5 +57,39 @@ test('smoke: a subagent turn leaves the band alone', async ($, on) => {
   const ui = await $.ui.mount({ ...band(false), surface: 'terminal' })
   expect((await ui.find({ type: 'Text', text: /ON YOU/ }))?.text).toMatch(/real item/)
   expect(await ui.find({ type: 'Text', text: /subagent/ })).toBe(undefined)
+  await ui.unmount()
+})
+
+test('smoke: a tool call does not wait for the band to update', async ($, on) => {
+  const clock = mock.clock(on)
+  engine(on)
+  // A slow write of the band's state beneath the plugin.
+  on('state.set', async (_, e, next) => (await clock.sleep(5_000), next(e)))
+  let isDone = false
+  void $.tool.call({ tool: 'Bash', command: 'ls', description: 'List files' }).then(() => (isDone = true))
+  await clock.settle()
+  expect(isDone).toBe(true)
+  await clock.advance(5_000)
+  const ui = await $.ui.mount({ ...band(true), surface: 'terminal' })
+  expect((await ui.find({ type: 'Text', text: /CLAUDE/ }))?.text).toMatch(/List files/)
+  await ui.unmount()
+})
+
+test('smoke: a slow band write from a tool call does not undo the end of the turn', async ($, on) => {
+  const clock = mock.clock(on)
+  engine(on)
+  let n = 0
+  // The first write (the tool call's) is slow; the turn's write is fast.
+  on('state.set', async (_, e, next) => (n++ === 0 && (await clock.sleep(5_000)), next(e)))
+  await $.tool.call({ tool: 'Bash', command: 'ls', description: 'List files' })
+  let isDone = false
+  void $.turn.complete(turn('## Blocked on me\n- vercel login')).then(() => (isDone = true))
+  await clock.settle()
+  expect(isDone).toBe(true)
+  await clock.advance(5_000)
+  // The next turn starts: the band must not show the last turn's tool as what Claude is doing.
+  const ui = await $.ui.mount({ ...band(true), surface: 'terminal' })
+  expect((await ui.find({ type: 'Text', text: /ON YOU/ }))?.text).toMatch(/vercel login/)
+  expect(await ui.find({ type: 'Text', text: /List files/ })).toBe(undefined)
   await ui.unmount()
 })
