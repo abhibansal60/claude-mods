@@ -47,11 +47,13 @@ export function lastSaid(tail: string): string {
 
 // A Bash command that would close or kill the pane, tab or herdr itself.
 export function killsMe(command: string, pane: string, tab: string): boolean {
-  if (/\b(pkill|killall)\b[^|;&]*herdr|\bherdr\s+server\s+stop\b/.test(command)) return true
-  if (!/\bherdr\s+(tab|pane|agent|workspace)\s+(close|kill|stop|remove)\b/.test(command)) return false
-  // The agent's own env vars name its pane and tab; expand them so `herdr pane close "$HERDR_PANE_ID"` counts.
-  const cmd = command.replace(/\$\{?HERDR_PANE_ID\}?/g, pane).replace(/\$\{?HERDR_TAB_ID\}?/g, tab)
+  // Stopping the server or the session stops this pane with it; so does killing herdr by name or pid.
+  if (/\b(pkill|killall)\b[^|;&]*herdr|\bherdr\s+(server|session)\s+stop\b/.test(command)) return true
+  if (/\bkill\b/.test(command) && /\b(pgrep|pidof)\b[^|;&)]*herdr/.test(command)) return true
+  const targets = [...command.matchAll(/\bherdr\s+(?:tab|pane|agent|workspace)\s+(?:close|kill|stop|remove)\b([^;&|\n]*)/g)].map(m => m[1]!)
+  // Only literal ids pass: a variable (even "${HERDR_PANE_ID:-}"), a substitution, or an id piped in through xargs could be this pane.
+  if (targets.some(t => !t.trim() || /[$`{]/.test(t))) return true
   // Whole ids only: closing w1:p12 must not count as closing w1:p1.
-  const names = (id: string) => new RegExp(`(^|[\\s"'=])${id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}([\\s"';&|]|$)`).test(cmd)
-  return [pane, tab, pane.split(':')[0]!].some(id => id && names(id))
+  const names = (id: string) => new RegExp(`(^|[\\s"'=])${id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}([\\s"';&|]|$)`)
+  return [pane, tab, pane.split(':')[0]!].some(id => id && targets.some(t => names(id).test(t)))
 }

@@ -1,6 +1,6 @@
 {
   "name": "herdr-fleet",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Pane: every herdr agent, its status and last words, with this pane marked",
   "types": "./types/index.d.ts",
   "author": {

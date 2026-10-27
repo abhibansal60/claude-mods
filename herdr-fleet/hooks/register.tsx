@@ -10,7 +10,14 @@ const agents = atom({ plugin: 'herdr-fleet', key: 'agents' } as const, [])
 const ICON: Record<Agent['status'], string> = { working: '▶', blocked: '⏳', done: '⏳', idle: '·', unknown: '?' }
 const COLOR: Record<Agent['status'], string | undefined> = { working: 'cyan', blocked: 'red', done: 'yellow', idle: undefined, unknown: undefined }
 
-async function refresh($: EngineInterface) {
+let refreshing: Promise<void> | null = null
+
+// One refresh at a time: a hung herdr must not stack a spawn every 20 s, nor toast twice.
+function refresh($: EngineInterface): Promise<void> {
+  return (refreshing ??= refreshNow($).finally(() => (refreshing = null)))
+}
+
+async function refreshNow($: EngineInterface) {
   const me = (await $.env.get('HERDR_PANE_ID')) ?? ''
   const config = (await $.env.get('CLAUDE_CONFIG_DIR')) ?? `${(await $.env.get('HOME')) ?? ''}/.claude`
   const listed = await $.process.run(['herdr', 'agent', 'list'], { timeoutMs: 10000 }).catch(() => null)
@@ -29,7 +36,7 @@ async function refresh($: EngineInterface) {
     // Read the log again only when the agent changed state.
     if (a.sessionId && (!before || before.seq !== a.seq)) {
       const log = `${config}/projects/${projectDir(a.cwd)}/${a.sessionId}.jsonl`
-      const tail = await $.process.run(['tail', '-c', '300000', log]).catch(() => null)
+      const tail = await $.process.run(['tail', '-c', '300000', log], { timeoutMs: 10000 }).catch(() => null)
       if (tail?.exitCode === 0) said = lastSaid(tail.stdout)
     }
     if (before && before.status !== 'blocked' && a.status === 'blocked' && !a.isMe) {
@@ -66,7 +73,7 @@ export const register: Register = on => {
     const pane = (await $.env.get('HERDR_PANE_ID')) ?? ''
     const tab = (await $.env.get('HERDR_TAB_ID')) ?? ''
     if (pane && killsMe(e.command, pane, tab)) {
-      return { deny: `herdr-fleet: this command would close this session's own herdr pane (${pane}) or herdr itself. Target other panes by id, or ask the user.` }
+      return { deny: `herdr-fleet: this command would close this session's own herdr pane (${pane}) or herdr itself. Target other panes by their literal id, or ask the user.` }
     }
     return next(e)
   })
